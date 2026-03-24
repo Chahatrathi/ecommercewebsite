@@ -25,17 +25,19 @@
         /* --- MARQUEE --- */
         .marquee-content { display: flex; width: 200%; animation: scroll 25s linear infinite; }
         @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .card { flex: 0 0 280px; height: 400px; margin: 0 10px; background: #111; padding: 20px; display: flex; flex-direction: column; justify-content: flex-end; border: 1px solid #222; }
+        .card { flex: 0 0 280px; height: 400px; margin: 0 10px; background: #111; padding: 20px; display: flex; flex-direction: column; justify-content: flex-end; border: 1px solid #222; transition: 0.3s; }
+        .card:hover { border-color: var(--accent); }
 
         /* --- FEED GRID --- */
-        .feed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .feed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
         .feed-card { aspect-ratio: 1/1; background: #0a0a0a; border: 1px solid #1a1a1a; }
 
         /* --- AUTH OVERLAY --- */
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(20px); }
         .glass-box { background: #0a0a0a; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px; border: 1px solid #222; text-align: center; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; background: #000; border: 1px solid #222; color: #fff; outline: none; }
-        .btn-prime { width: 100%; padding: 14px; background: #fff; color: #000; border: none; font-weight: 900; cursor: pointer; }
+        .btn-prime { width: 100%; padding: 14px; background: #fff; color: #000; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        .btn-prime:disabled { opacity: 0.5; cursor: not-allowed; }
         
         /* --- UTILS --- */
         .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block; margin-left: 5px; }
@@ -65,7 +67,7 @@
             <h1 style="font-size:18vw; font-weight:900; letter-spacing:-5px;">ELITE</h1>
         </div>
         <div class="marquee-content">
-            <div class="card" onclick="this.classList.toggle('active')"><h3>TEE</h3><p>$85</p></div>
+            <div class="card"><h3>TEE</h3><p>$85</p></div>
             <div class="card"><h3>HOODIE</h3><p>$120</p></div>
             <div class="card"><h3>CARGO</h3><p>$180</p></div>
             <div class="card"><h3>TEE</h3><p>$85</p></div>
@@ -82,30 +84,33 @@
 
     <div id="contact-page" class="page">
         <h1>CONTACT</h1>
-        <input type="text" placeholder="NAME">
-        <textarea style="width:100%; background:#000; color:#fff; padding:10px; border:1px solid #222;" rows="4" placeholder="MESSAGE"></textarea>
-        <button class="btn-prime" style="margin-top:10px;" onclick="showToast('SENT')">SEND</button>
+        <div style="max-width:400px; margin-top:20px;">
+            <input type="text" id="c-name" placeholder="NAME">
+            <textarea id="c-msg" style="width:100%; background:#000; color:#fff; padding:10px; border:1px solid #222;" rows="4" placeholder="MESSAGE"></textarea>
+            <button class="btn-prime" style="margin-top:10px;" onclick="handleContact()">SEND</button>
+        </div>
     </div>
 
     <div id="profile-page" class="page">
-        <h2>PROFILE</h2>
-        <input type="text" id="p-name">
-        <button class="btn-prime" onclick="updateProfile()">SAVE</button>
+        <h2>USER PROFILE</h2>
+        <div style="max-width:400px; margin-top:20px;">
+            <p style="font-size:10px; opacity:0.5; margin-bottom:5px;">FULL NAME</p>
+            <input type="text" id="p-name">
+            <button class="btn-prime" onclick="updateProfile()">UPDATE NAME</button>
+        </div>
     </div>
 
     <div id="auth-overlay" class="overlay">
         <div class="glass-box">
-            <h2 id="auth-title">LOGIN</h2>
+            <h2 id="auth-title" style="margin-bottom:20px;">LOGIN</h2>
             <div id="auth-form-fields"></div>
-            <button class="btn-prime" onclick="submitAuth()">PROCEED</button>
-            <p onclick="switchAuthMode()" style="font-size:10px; margin-top:10px; opacity:0.5; cursor:pointer;">SWITCH MODE</p>
+            <button id="auth-btn" class="btn-prime" onclick="submitAuth()">PROCEED</button>
+            <p onclick="switchAuthMode()" style="font-size:10px; margin-top:15px; opacity:0.5; cursor:pointer;">OR SWITCH MODE</p>
+            <p onclick="document.getElementById('auth-overlay').style.display='none'" style="font-size:10px; margin-top:10px; cursor:pointer;">CLOSE</p>
         </div>
     </div>
 
     <script>
-        // --- VERCEL CLOUD CONFIGURATION ---
-        // 1. First, deploy your backend (server.js) to Render.com
-        // 2. Paste the live URL Render gives you below:
         const CLOUD_SERVER_URL = "https://ecommercewebsite-diea.onrender.com"; 
         const API_BASE = `${CLOUD_SERVER_URL}/api`;
 
@@ -114,6 +119,7 @@
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+            window.scrollTo(0,0);
         }
 
         function openAuth(mode) {
@@ -121,55 +127,97 @@
             document.getElementById('auth-title').innerText = mode;
             const fields = document.getElementById('auth-form-fields');
             if(mode === 'SIGNUP') {
-                fields.innerHTML = `<input id="a-name" placeholder="NAME"><input id="a-email" placeholder="EMAIL"><input type="password" id="a-pass" placeholder="PASSWORD">`;
+                fields.innerHTML = `<input id="a-name" placeholder="FULL NAME"><input id="a-email" placeholder="EMAIL"><input type="password" id="a-pass" placeholder="PASSWORD">`;
             } else {
                 fields.innerHTML = `<input id="a-email" placeholder="EMAIL"><input type="password" id="a-pass" placeholder="PASSWORD">`;
             }
         }
 
-        function switchAuthMode() { openAuth(document.getElementById('auth-title').innerText === 'LOGIN' ? 'SIGNUP' : 'LOGIN'); }
+        function switchAuthMode() { 
+            const current = document.getElementById('auth-title').innerText;
+            openAuth(current === 'LOGIN' ? 'SIGNUP' : 'LOGIN'); 
+        }
 
         async function submitAuth() {
+            const btn = document.getElementById('auth-btn');
             const email = document.getElementById('a-email').value;
             const pass = document.getElementById('a-pass').value;
             const name = document.getElementById('a-name')?.value;
             const mode = document.getElementById('auth-title').innerText.toLowerCase();
 
+            if(!email || !pass) return alert("Fill all fields");
+
+            btn.innerText = "WAITING...";
+            btn.disabled = true;
+
             try {
                 const res = await fetch(`${API_BASE}/${mode}`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ email, password: pass, fullName: name })
                 });
                 const data = await res.json();
+                
                 if(res.ok) {
-                    loggedUser = { ...data.user, email };
+                    loggedUser = data.user;
                     document.getElementById('auth-overlay').style.display = 'none';
-                    document.getElementById('auth-trigger').innerText = loggedUser.name;
+                    document.getElementById('auth-trigger').innerText = (loggedUser.name || "USER").toUpperCase();
                     document.getElementById('profile-btn').style.display = 'block';
-                    showToast("WELCOME");
+                    document.getElementById('p-name').value = loggedUser.name || "";
+                    showToast("SUCCESSFULLY AUTHENTICATED");
+                } else {
+                    alert(data.error || "Error during authentication");
                 }
             } catch(e) { 
-                console.error("Auth Error:", e);
-                alert("Server Unreachable. Ensure your Render backend is live."); 
+                alert("Server is currently waking up. Please try again in 30 seconds."); 
+            } finally {
+                btn.innerText = "PROCEED";
+                btn.disabled = false;
             }
         }
 
+        function updateProfile() {
+            const newName = document.getElementById('p-name').value;
+            if(loggedUser) {
+                loggedUser.name = newName;
+                document.getElementById('auth-trigger').innerText = newName.toUpperCase();
+                showToast("PROFILE UPDATED");
+            }
+        }
+
+        function handleContact() {
+            const name = document.getElementById('c-name').value;
+            if(!name) return alert("Please enter your name");
+            showToast(`THANK YOU ${name.toUpperCase()}`);
+            document.getElementById('c-name').value = "";
+            document.getElementById('c-msg').value = "";
+        }
+
+        // --- HERO ANIMATION ---
         const canvas = document.getElementById("hero-canvas");
         const ctx = canvas.getContext("2d");
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth; 
+        canvas.height = window.innerHeight;
+        
         const images = [];
+        let loadedCount = 0;
         for(let i=1; i<=50; i++) { 
             const img = new Image(); 
             img.src = `frames/${i.toString().padStart(2, '0')}.jpg`; 
+            img.onload = () => { loadedCount++; if(loadedCount === 1) anim(); };
             images.push(img); 
         }
+
         let idx = 0;
         function anim() { 
             ctx.clearRect(0,0,canvas.width,canvas.height); 
-            if(images[Math.floor(idx%50)]) ctx.drawImage(images[Math.floor(idx%50)], 0, 0, canvas.width, canvas.height); 
-            idx += 0.1; requestAnimationFrame(anim); 
+            const currentImg = images[Math.floor(idx % 50)];
+            if(currentImg && currentImg.complete) {
+                ctx.drawImage(currentImg, 0, 0, canvas.width, canvas.height); 
+            }
+            idx += 0.15; 
+            requestAnimationFrame(anim); 
         }
-        images[0].onload = anim;
 
         function showToast(m) { 
             const t = document.getElementById('toast'); 
@@ -178,13 +226,14 @@
             setTimeout(() => t.style.display = "none", 3000); 
         }
 
-        async function check() {
+        async function checkStatus() {
             try { 
                 const res = await fetch(`${API_BASE}/status`); 
                 if(res.ok) document.getElementById('status-dot').classList.add('online'); 
-            } catch(e) { console.log("Wake up signal sent to Render..."); }
+            } catch(e) { console.log("Wake up signal sent..."); }
         }
-        setInterval(check, 10000); check();
+        setInterval(checkStatus, 20000); 
+        checkStatus();
     </script>
 </body>
 </html>
