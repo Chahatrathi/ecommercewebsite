@@ -5,39 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ELITE | Official Store</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
     <style>
         :root { --bg: #000; --accent: #fff; --green: #00ff88; --red: #ff4444; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: var(--bg); color: #fff; font-family: 'Helvetica Neue', Arial, sans-serif; overflow-x: hidden; }
 
-        /* NAV FIX: Higher Z-Index to ensure it's always clickable */
+        /* --- NAVIGATION --- */
         nav { position: fixed; top: 0; width: 100%; display: flex; justify-content: space-between; padding: 25px 40px; z-index: 9999; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); }
         .logo { font-weight: 900; letter-spacing: 8px; cursor: pointer; text-transform: uppercase; }
         .nav-links { display: flex; gap: 20px; font-size: 10px; letter-spacing: 2px; align-items: center; }
         .nav-links a { cursor: pointer; opacity: 0.7; text-transform: uppercase; color: #fff; text-decoration: none; transition: 0.3s; }
         .nav-links a:hover { opacity: 1; color: var(--green); }
         
-        /* PAGE SYSTEM FIX */
+        /* --- PAGE SYSTEM --- */
         .page { display: none; min-height: 100vh; width: 100%; padding: 120px 30px; position: relative; z-index: 10; }
         .page.active { display: block; }
-
         #home-page.active { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0; }
 
         #hero-canvas { position: fixed; inset: 0; z-index: 1; filter: brightness(0.5); pointer-events: none; }
         
-        /* MARQUEE */
+        /* --- CART SIDEBAR --- */
+        #cart-sidebar { position: fixed; right: -400px; top: 0; width: 350px; height: 100vh; background: #050505; border-left: 1px solid #222; z-index: 10001; padding: 40px; display: flex; flex-direction: column; transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        #cart-sidebar.open { right: 0; }
+        .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        #cart-items-list { flex-grow: 1; overflow-y: auto; margin-bottom: 20px; }
+        .cart-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #111; font-size: 11px; letter-spacing: 1px; }
+        .cart-footer { border-top: 1px solid #222; padding-top: 20px; }
+
+        /* --- PRODUCT CARDS --- */
         .marquee-container { width: 100%; overflow: hidden; background: #000; padding: 40px 0; z-index: 20; }
         .marquee-content { display: flex; width: 200%; animation: scroll 30s linear infinite; }
         @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .card { flex: 0 0 300px; height: 400px; margin: 0 15px; background: #0a0a0a; border: 1px solid #1a1a1a; padding: 20px; display: flex; flex-direction: column; justify-content: flex-end; transition: 0.4s; }
+        .card { flex: 0 0 300px; height: 420px; margin: 0 15px; background: #0a0a0a; border: 1px solid #1a1a1a; padding: 20px; display: flex; flex-direction: column; justify-content: flex-end; transition: 0.4s; }
         .card:hover { border-color: #fff; transform: translateY(-10px); }
+        .btn-add { width: 100%; padding: 12px; background: #fff; color: #000; border: none; font-weight: 900; cursor: pointer; font-size: 10px; margin-top: 15px; letter-spacing: 1px; }
 
-        /* CONTACT CENTERED */
+        /* --- CONTACT --- */
         #contact-page { text-align: center; display: none; flex-direction: column; align-items: center; justify-content: center; }
         #contact-page.active { display: flex; }
         .contact-box { width: 100%; max-width: 450px; background: #0a0a0a; padding: 40px; border: 1px solid #1a1a1a; }
 
-        /* AUTH */
+        /* --- AUTH --- */
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(20px); }
         .glass-box { background: #050505; padding: 40px; width: 90%; max-width: 400px; border: 1px solid #222; text-align: center; }
         input, textarea { width: 100%; padding: 15px; margin-bottom: 15px; background: #000; border: 1px solid #222; color: #fff; outline: none; font-size: 13px; }
@@ -52,12 +61,29 @@
 
     <div id="toast">MESSAGE</div>
 
+    <div id="cart-sidebar">
+        <div class="cart-header">
+            <h2 style="letter-spacing:5px; font-size: 18px;">CART</h2>
+            <span onclick="toggleCart()" style="cursor:pointer; font-size: 10px; opacity: 0.5;">CLOSE</span>
+        </div>
+        <div id="cart-items-list">
+            </div>
+        <div class="cart-footer">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 20px; font-weight: 900;">
+                <span>TOTAL</span>
+                <span id="cart-total-price">$0</span>
+            </div>
+            <button class="btn-prime" onclick="initiateStripeCheckout()">CHECKOUT</button>
+        </div>
+    </div>
+
     <nav>
         <div class="logo" onclick="showPage('home-page')">ELITE</div>
         <div class="nav-links">
             <a onclick="showPage('home-page')">Home</a>
             <a onclick="showPage('feed-page')">Feed</a>
             <a onclick="showPage('contact-page')">Contact</a>
+            <a onclick="toggleCart()">Cart (<span id="cart-count">0</span>)</a>
             <a id="auth-trigger" onclick="openAuth('LOGIN')">Account<span id="status-dot" class="status-dot"></span></a>
         </div>
     </nav>
@@ -70,11 +96,11 @@
         </div>
         <div class="marquee-container">
             <div class="marquee-content">
-                <div class="card"><h3>PRO TEE</h3><p>$85</p></div>
-                <div class="card"><h3>ELITE HOOD</h3><p>$120</p></div>
-                <div class="card"><h3>CARGO V2</h3><p>$180</p></div>
-                <div class="card"><h3>PRO TEE</h3><p>$85</p></div>
-                <div class="card"><h3>ELITE HOOD</h3><p>$120</p></div>
+                <div class="card"><h3>PRO TEE</h3><p>$85</p><button class="btn-add" onclick="addToCart('PRO TEE', 85)">ADD TO CART</button></div>
+                <div class="card"><h3>ELITE HOOD</h3><p>$120</p><button class="btn-add" onclick="addToCart('ELITE HOOD', 120)">ADD TO CART</button></div>
+                <div class="card"><h3>CARGO V2</h3><p>$180</p><button class="btn-add" onclick="addToCart('CARGO V2', 180)">ADD TO CART</button></div>
+                <div class="card"><h3>PRO TEE</h3><p>$85</p><button class="btn-add" onclick="addToCart('PRO TEE', 85)">ADD TO CART</button></div>
+                <div class="card"><h3>ELITE HOOD</h3><p>$120</p><button class="btn-add" onclick="addToCart('ELITE HOOD', 120)">ADD TO CART</button></div>
             </div>
         </div>
     </div>
@@ -110,32 +136,79 @@
 
     <script>
         const API_BASE = "https://ecommercewebsite-diea.onrender.com/api";
+        const stripe = Stripe('pk_test_REPLACE_WITH_YOUR_KEY'); 
         let loggedUser = null;
+        let cart = [];
 
-        // UPDATED PAGE SWITCHER
+        // --- PAGE SWITCHER ---
         function showPage(id) {
-            console.log("Switching to:", id);
-            // Hide all pages manually
             const pages = document.querySelectorAll('.page');
             pages.forEach(p => {
                 p.classList.remove('active');
                 p.style.display = 'none'; 
             });
-
-            // Show target page
             const target = document.getElementById(id);
             if(target) {
                 target.classList.add('active');
-                // Ensure Flex for centered pages
-                if(id === 'home-page' || id === 'contact-page') {
-                    target.style.display = 'flex';
-                } else {
-                    target.style.display = 'block';
-                }
+                target.style.display = (id === 'home-page' || id === 'contact-page') ? 'flex' : 'block';
             }
             window.scrollTo(0,0);
         }
 
+        // --- CART LOGIC ---
+        function toggleCart() {
+            document.getElementById('cart-sidebar').classList.toggle('open');
+        }
+
+        function addToCart(name, price) {
+            cart.push({ name, price });
+            updateCartUI();
+            showToast(`${name} ADDED`);
+        }
+
+        function updateCartUI() {
+            const list = document.getElementById('cart-items-list');
+            const totalEl = document.getElementById('cart-total-price');
+            const countEl = document.getElementById('cart-count');
+            
+            list.innerHTML = "";
+            let total = 0;
+            
+            cart.forEach((item, index) => {
+                total += item.price;
+                list.innerHTML += `
+                    <div class="cart-item">
+                        <span>${item.name}</span>
+                        <span>$${item.price}</span>
+                    </div>`;
+            });
+            
+            totalEl.innerText = `$${total}`;
+            countEl.innerText = cart.length;
+        }
+
+        async function initiateStripeCheckout() {
+            if (cart.length === 0) return showToast("CART IS EMPTY");
+            if (!loggedUser) return showToast("PLEASE LOGIN TO BUY");
+
+            try {
+                const res = await fetch(`${API_BASE}/checkout`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ items: cart })
+                });
+                const session = await res.json();
+                if(session.id) {
+                    stripe.redirectToCheckout({ sessionId: session.id });
+                } else {
+                    alert("Checkout Error");
+                }
+            } catch(e) {
+                showToast("CHECKOUT FAILED");
+            }
+        }
+
+        // --- AUTH LOGIC ---
         function openAuth(mode) {
             document.getElementById('auth-overlay').style.display = 'flex';
             document.getElementById('auth-title').innerText = mode;
@@ -215,7 +288,6 @@
         }
         images[0].onload = anim;
 
-        // Check Backend Status
         async function checkStatus() {
             try { 
                 const res = await fetch(`${API_BASE}/status`);
